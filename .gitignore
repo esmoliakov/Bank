@@ -67,3 +67,5 @@ dist/
 
 # OS
 .DS_Store
+
+.env

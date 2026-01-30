@@ -29,4 +29,28 @@ public class Account
 
     public User? User {get; set;}
 
+
+    public void Deposit(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentException("Amount must be higher than 0.");
+        }
+        Balance += amount;
+    }
+
+    public void Withdraw(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentException("Amount must be higher than 0.");
+        }
+
+        if (amount > Balance)
+        {
+            throw new InvalidOperationException("Amount is higher than balance.");
+        }
+        Balance -= amount;
+    }
+
 }
