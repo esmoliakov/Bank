@@ -4,7 +4,9 @@ using Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// BUILD CONNECTION STRING FROM ENV
+// --------------------
+// Database
+// --------------------
 var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
 var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
 var dbName = Environment.GetEnvironmentVariable("DB_NAME");
@@ -18,19 +20,35 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
 
-// SERVICES
+// --------------------
+// Services
+// --------------------
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 
-builder.Services.AddOpenApi();
+// --------------------
+// Controllers + Swagger
+// --------------------
+builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// --------------------
+// Middleware
+// --------------------
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
+
+app.MapControllers();
+
+
 app.Run();
