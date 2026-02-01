@@ -19,8 +19,8 @@ public class UserService : IUserService
 
     public async Task<UserResponseDto> CreateUserAsync(UserCreateDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.UserName))
-            throw new ArgumentException("UserName is required.");
+        if (string.IsNullOrWhiteSpace(dto.Password))
+            throw new ArgumentException("Password is required.");
 
         var existingUser = await _context.Users
             .FirstOrDefaultAsync(u => u.UserName == dto.UserName || u.Email == dto.Email);
@@ -28,24 +28,27 @@ public class UserService : IUserService
         if (existingUser != null)
             throw new InvalidOperationException("User with the same username or email already exists.");
 
+        CreatePasswordHash(dto.Password, out var hash, out var salt);
         var user = new User
         {
             FullName = dto.FullName,
             DateOfBirth = dto.DateOfBirth,
-            PhoneNumber = dto.PhoneNumber,
-            Email = dto.Email,
-            Address = dto.Address,
             UserName = dto.UserName,
+            Email = dto.Email,
+            PhoneNumber = dto.PhoneNumber,
+            Address = dto.Address,
             IsActive = true,
             TwoFactorEnabled = false
         };
 
+        user.SetPassword(hash, salt);
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
         return MapToDto(user);
     }
+
 
     public async Task<UserResponseDto> GetUserByIdAsync(int userId)
     {

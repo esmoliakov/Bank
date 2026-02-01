@@ -6,7 +6,8 @@ public record UserCreateDto(
     string? PhoneNumber,
     string? Email,
     string? Address,
-    string? UserName
+    string? UserName,
+    string Password
 );
 
 public record UserUpdateDto(
