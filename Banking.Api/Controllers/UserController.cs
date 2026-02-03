@@ -55,6 +55,21 @@ public class UsersController : ControllerBase
         }
     }
 
+    // GET: api/users
+    [HttpGet]
+    public async Task<ActionResult<UserResponseDto>> GetAllUsers()
+    {
+        try
+        {
+            var users = await _userService.GetAllUsersAsync();
+            return Ok(users);
+        }   
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
     // PUT: api/users/{userId}
     [HttpPut("{userId:int}")]
     public async Task<ActionResult<UserResponseDto>> UpdateUser(

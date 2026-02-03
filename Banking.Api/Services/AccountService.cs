@@ -28,13 +28,27 @@ public class AccountService : IAccountService
             AccountNumber = GenerateAccountNumber()
         };
 
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+
         if (dto.InitialDeposit > 0)
         {
             account.Deposit(dto.InitialDeposit);
-        }
 
-        _context.Accounts.Add(account);
-        await _context.SaveChangesAsync();
+            var transaction = new Transaction
+            {
+                FromAccountId = account.AccountId,
+                Amount = dto.InitialDeposit,
+                Currency = account.Currency,
+                TransactionType = TransactionType.Deposit,
+                Status = TransactionStatus.Completed,
+                BalanceAfter = account.Balance,
+                Description = "Initial deposit"
+            };
+
+            _context.Transactions.Add(transaction);
+            await _context.SaveChangesAsync();
+        }
 
         return MapToDto(account);
     }
@@ -49,6 +63,14 @@ public class AccountService : IAccountService
             throw new KeyNotFoundException("Account not found.");
 
         return MapToDto(account);
+    }
+
+    public async Task<List<AccountResponseDto>> GetAllAccountsAsync()
+    {
+        var accounts = await _context.Accounts
+                .Where(a => a.IsActive)
+                .ToListAsync();
+        return accounts.Select(MapToDto).ToList();
     }
 
     public async Task<AccountResponseDto> UpdateAccountAsync(int accountId, AccountUpdateDto dto)

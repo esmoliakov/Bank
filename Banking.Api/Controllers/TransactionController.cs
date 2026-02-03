@@ -59,23 +59,6 @@ public class TransactionsController : ControllerBase
         }
     }
 
-    // PUT: api/transactions/user/{userId}
-    [HttpPut("user/{userId:int}")]
-    public async Task<ActionResult<TransactionResponseDto>> UpdateTransactionStatus(
-        int userId,
-        [FromBody] TransactionUpdateDto dto)
-    {
-        try
-        {
-            var updated = await _transactionService.UpdateTransactionAsync(userId, dto);
-            return Ok(updated);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-    }
-
     // DELETE: api/transactions/{transactionId}
     [HttpDelete("{transactionId:int}")]
     public async Task<IActionResult> DeleteTransaction(int transactionId)

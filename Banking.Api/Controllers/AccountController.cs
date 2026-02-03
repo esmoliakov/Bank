@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Services;
 using Models.DTOs;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 
 namespace Controllers;
 
@@ -41,6 +42,21 @@ public class AccountsController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+    }
+
+    // GET: api/accounts
+    [HttpGet]
+    public async Task<ActionResult<List<AccountResponseDto>>> GetAllAccounts()
+    {
+        try
+        {
+            var accounts = await _accountService.GetAllAccountsAsync();
+            return Ok(accounts);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
         }
     }
 

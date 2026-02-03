@@ -1,11 +1,9 @@
 namespace Models.DTOs;
 
 public record TransactionCreateDto(
-    int AccountId,
-    int? FromAccountId,
+    int FromAccountId,
     int? ToAccountId,
     decimal Amount,
-    Currency Currency,
     TransactionType TransactionType,
     string? Description
 );
@@ -16,7 +14,6 @@ public record TransactionUpdateDto(
 
 public record TransactionResponseDto(
     int TransactionId,
-    int AccountId,
     int? FromAccountId,
     int? ToAccountId,
     decimal Amount,

@@ -18,8 +18,6 @@ public class Transaction
 {
     public int TransactionId { get; set; }
 
-    public int AccountId { get; set; }
-
     public int? FromAccountId { get; set; }
     public int? ToAccountId { get; set; }
 
@@ -33,6 +31,4 @@ public class Transaction
 
     public decimal BalanceAfter { get; set; }
     public string? Description { get; set; }
-
-    public Account? Account { get; set; }
 }

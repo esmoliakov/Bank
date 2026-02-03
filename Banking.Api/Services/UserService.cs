@@ -61,6 +61,14 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
+    public async Task<List<UserResponseDto>> GetAllUsersAsync()
+    {
+        var users = await _context.Users
+                .Where(u => u.IsActive)
+                .ToListAsync();
+        return users.Select(MapToDto).ToList();
+    }
+
     public async Task<UserResponseDto> UpdateUserAsync(int userId, UserUpdateDto dto)
     {
         var user = await _context.Users

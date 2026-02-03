@@ -2,6 +2,7 @@ using Data;
 using Microsoft.EntityFrameworkCore;
 using Services;
 using DotNetEnv;
+using System.Text.Json.Serialization;
 
 Env.Load();
 
@@ -33,8 +34,13 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 // --------------------
 // Controllers + Swagger
 // --------------------
-builder.Services.AddControllers();
-
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter()
+        );
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

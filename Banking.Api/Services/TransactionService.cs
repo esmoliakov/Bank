@@ -19,32 +19,16 @@ public class TransactionService : ITransactionService
         if (dto.Amount <= 0)
             throw new ArgumentException("Amount must be greater than 0.");
 
-        var account = await _context.Accounts
-            .FirstOrDefaultAsync(a => a.AccountId == dto.AccountId);
+        var fromAccount = await _context.Accounts
+            .FirstOrDefaultAsync(a => a.AccountId == dto.FromAccountId);
 
-        if (account == null)
-            throw new KeyNotFoundException("Account not found.");
+        if (fromAccount == null)
+            throw new KeyNotFoundException("From account not found.");
 
-        Account? fromAccount = null;
+        if (!fromAccount.IsActive)
+            throw new InvalidOperationException("From account is inactive.");
+
         Account? toAccount = null;
-
-        if (dto.TransactionType == TransactionType.Withdrawal || dto.TransactionType == TransactionType.Transfer)
-        {
-            if (dto.FromAccountId == null)
-                throw new ArgumentException("FromAccountId is required for withdrawal/transfer.");
-
-            fromAccount = await _context.Accounts
-                .FirstOrDefaultAsync(a => a.AccountId == dto.FromAccountId);
-
-            if (fromAccount == null)
-                throw new KeyNotFoundException("From account not found.");
-
-            if (!fromAccount.IsActive)
-                throw new InvalidOperationException("From account is inactive.");
-
-            if (dto.Amount > fromAccount.Balance)
-                throw new InvalidOperationException("Insufficient balance.");
-        }
 
         if (dto.TransactionType == TransactionType.Transfer)
         {
@@ -61,37 +45,56 @@ public class TransactionService : ITransactionService
                 throw new InvalidOperationException("To account is inactive.");
         }
 
-        if (dto.TransactionType == TransactionType.Deposit)
-        {
-            account.Deposit(dto.Amount);
-        }
-        else if (dto.TransactionType == TransactionType.Withdrawal)
-        {
-            fromAccount!.Withdraw(dto.Amount);
-        }
-        else if (dto.TransactionType == TransactionType.Transfer)
-        {
-            fromAccount!.Withdraw(dto.Amount);
-            toAccount!.Deposit(dto.Amount);
-        }
+        if (dto.TransactionType != TransactionType.Deposit &&
+            dto.Amount > fromAccount.Balance)
+            throw new InvalidOperationException("Insufficient balance.");
 
-        var transaction = new Transaction
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+
+        try
         {
-            AccountId = dto.AccountId,
-            FromAccountId = dto.FromAccountId,
-            ToAccountId = dto.ToAccountId,
-            Amount = dto.Amount,
-            Currency = dto.Currency,
-            TransactionType = dto.TransactionType,
-            Status = TransactionStatus.Completed,
-            BalanceAfter = account.Balance,
-            Description = dto.Description
-        };
+            switch (dto.TransactionType)
+            {
+                case TransactionType.Deposit:
+                    fromAccount.Deposit(dto.Amount);
+                    break;
 
-        _context.Transactions.Add(transaction);
-        await _context.SaveChangesAsync();
+                case TransactionType.Withdrawal:
+                    fromAccount.Withdraw(dto.Amount);
+                    break;
 
-        return MapToDto(transaction);
+                case TransactionType.Transfer:
+                    fromAccount.Withdraw(dto.Amount);
+                    toAccount!.Deposit(dto.Amount);
+                    break;
+            }
+
+            var transaction = new Transaction
+            {
+                FromAccountId = fromAccount.AccountId,
+                ToAccountId = dto.TransactionType == TransactionType.Transfer
+                    ? dto.ToAccountId
+                    : null,
+                Amount = dto.Amount,
+                Currency = fromAccount.Currency,
+                TransactionType = dto.TransactionType,
+                Status = TransactionStatus.Completed,
+                BalanceAfter = fromAccount.Balance,
+                Description = dto.Description
+            };
+
+            _context.Transactions.Add(transaction);
+
+            await _context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            return MapToDto(transaction);
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<TransactionResponseDto> GetTransactionByIdAsync(int transactionId)
@@ -101,22 +104,6 @@ public class TransactionService : ITransactionService
 
         if (transaction == null)
             throw new KeyNotFoundException("Transaction not found.");
-
-        return MapToDto(transaction);
-    }
-
-    public async Task<TransactionResponseDto> UpdateTransactionAsync(int userId, TransactionUpdateDto dto)
-    {
-        var transaction = await _context.Transactions
-            .Include(t => t.Account)
-            .FirstOrDefaultAsync(t => t.Account!.UserId == userId);
-
-        if (transaction == null)
-            throw new KeyNotFoundException("Transaction not found.");
-
-        transaction.Status = dto.Status;
-
-        await _context.SaveChangesAsync();
 
         return MapToDto(transaction);
     }
@@ -138,7 +125,6 @@ public class TransactionService : ITransactionService
     {
         return new TransactionResponseDto(
             transaction.TransactionId,
-            transaction.AccountId,
             transaction.FromAccountId,
             transaction.ToAccountId,
             transaction.Amount,
