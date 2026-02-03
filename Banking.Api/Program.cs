@@ -4,12 +4,12 @@ using Services;
 using DotNetEnv;
 using System.Text.Json.Serialization;
 
-Env.Load();
+Env.Load(); // Load environment variables from .env file
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --------------------
-// Database
+// Database Configuration
 // --------------------
 var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
 var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
@@ -25,22 +25,34 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 
 // --------------------
-// Services
+// Dependency Injection for Services
 // --------------------
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 // --------------------
-// Controllers + Swagger
+// CORS Configuration
+// --------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173") // React dev server
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// --------------------
+// Controllers + JSON options + Swagger
 // --------------------
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.Converters.Add(
-            new JsonStringEnumConverter()
-        );
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -55,9 +67,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Enable CORS before mapping controllers
+app.UseCors("AllowFrontend");
+
+// Optional HTTPS redirection (commented out for local dev)
 // app.UseHttpsRedirection();
 
 app.MapControllers();
-
 
 app.Run();
